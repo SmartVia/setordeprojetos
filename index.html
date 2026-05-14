@@ -588,9 +588,9 @@
         const first = Number(slashDate[1]);
         const second = Number(slashDate[2]);
         const year = Number(slashDate[3].length === 2 ? `20${slashDate[3]}` : slashDate[3]);
-        const isBrazilianOnly = first > 12;
-        const day = isBrazilianOnly ? first : second;
-        const month = isBrazilianOnly ? second : first;
+        const isAmericanOnly = second > 12;
+        const day = isAmericanOnly ? second : first;
+        const month = isAmericanOnly ? first : second;
         return new Date(year, month - 1, day);
       }
 

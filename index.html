@@ -334,7 +334,7 @@
 
     .insight-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
       margin-bottom: 18px;
     }
@@ -514,6 +514,7 @@
         <div class="mini-kpi"><span>Propostas enviadas</span><strong id="kpiPropostasEnviadas">0</strong></div>
         <div class="mini-kpi"><span>Propostas fechadas</span><strong id="kpiPropostasFechadas">0</strong></div>
         <div class="mini-kpi"><span>Conversão proposta</span><strong id="kpiConversaoPropostas">0%</strong></div>
+        <div class="mini-kpi"><span>Canal principal</span><strong id="kpiCanalPrincipal">-</strong></div>
       </div>
       <div class="chart-wrap" style="margin-bottom:18px;"><canvas id="leadChart"></canvas></div>
       <div id="prospectionTableContainer" class="table-wrap">
@@ -531,6 +532,7 @@
 
   <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyM6cDpNsRa8vYzJ0oXFAuU_0uKr8d4F2bUguTYIWs76eHDgAMU0q8xs2OiIuaOWt_LnoVbeIQLnDT/pub?output=csv';
+    const PROSPECTION_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyM6cDpNsRa8vYzJ0oXFAuU_0uKr8d4F2bUguTYIWs76eHDgAMU0q8xs2OiIuaOWt_LnoVbeIQLnDT/pub?gid=1855929&single=true&output=csv';
 
     const state = {
       rows: [],
@@ -639,6 +641,12 @@
     };
 
     const normalizeText = (value) => String(value || '').trim().toLowerCase();
+    const normalizeForMatch = (value) => normalizeText(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const detectHeaderAndDataRows = (rows) => {
       const normalizedRows = rows.map(row => {
@@ -706,6 +714,37 @@
       return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
     };
 
+    const parseMonthValue = (value) => {
+      if (!value && value !== 0) return null;
+      if (value instanceof Date && !isNaN(value)) return value;
+      if (typeof value === 'number') return excelDateToJSDate(value);
+
+      const text = String(value).trim();
+      const directDate = parseDate(text);
+      if (directDate) return directDate;
+
+      const normalized = normalizeForMatch(text).replace(/\bde\b/g, ' ').replace(/\s+/g, ' ').trim();
+      const match = normalized.match(/^(jan|janeiro|fev|fevereiro|mar|marco|abr|abril|mai|maio|jun|junho|jul|julho|ago|agosto|set|setembro|out|outubro|nov|novembro|dez|dezembro)\s+(\d{2,4})$/);
+      if (!match) return null;
+
+      const months = {
+        jan: 0, janeiro: 0,
+        fev: 1, fevereiro: 1,
+        mar: 2, marco: 2,
+        abr: 3, abril: 3,
+        mai: 4, maio: 4,
+        jun: 5, junho: 5,
+        jul: 6, julho: 6,
+        ago: 7, agosto: 7,
+        set: 8, setembro: 8,
+        out: 9, outubro: 9,
+        nov: 10, novembro: 10,
+        dez: 11, dezembro: 11
+      };
+      const year = match[2].length === 2 ? Number(`20${match[2]}`) : Number(match[2]);
+      return new Date(year, months[match[1]], 1);
+    };
+
     const extractProspectionRows = (rows) => {
       const normalizedRows = rows.map(row => {
         const obj = {};
@@ -714,8 +753,8 @@
       });
 
       const headerIndex = normalizedRows.findIndex(row => {
-        const values = Object.values(row).map(v => normalizeText(v));
-        return values.includes('mês') || values.includes('mes')
+        const values = Object.values(row).map(v => normalizeForMatch(v));
+        return values.includes('mes')
           ? values.some(v => v.includes('prospe')) && values.some(v => v.includes('propostas'))
           : false;
       });
@@ -724,11 +763,11 @@
 
       const headerSource = normalizedRows[headerIndex];
       const rawHeaders = Object.keys(headerSource).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
-      const headers = rawHeaders.map(key => normalizeText(headerSource[key]));
+      const headers = rawHeaders.map(key => normalizeForMatch(headerSource[key]));
       const findCol = (terms) => rawHeaders.find((key, idx) => terms.some(term => headers[idx].includes(term)));
 
-      const colMes = findCol(['mês', 'mes']);
-      const colAtiva = findCol(['prospeção ativa', 'prospecção ativa', 'prospeção', 'prospecção ativa']);
+      const colMes = findCol(['mes']);
+      const colAtiva = findCol(['prospecao ativa', 'prospeccao ativa', 'prospecao']);
       const colRenovacoes = findCol(['lista de renova']);
       const colIndicacoes = findCol(['indica']);
       const colTotal = findCol(['total de leads']);
@@ -736,7 +775,7 @@
       const colFechadas = findCol(['propostas fechadas']);
 
       return normalizedRows.slice(headerIndex + 1).map(row => {
-        const date = parseDate(row[colMes]);
+        const date = parseMonthValue(row[colMes]);
         const prospeccaoAtiva = toNumber(row[colAtiva]);
         const listaRenovacoes = toNumber(row[colRenovacoes]);
         const indicacoesClientes = toNumber(row[colIndicacoes]);
@@ -959,9 +998,11 @@
           data: {
             labels: prospectRows.map(r => r.mes),
             datasets: [
-              { label: 'Total de leads', data: prospectRows.map(r => r.totalLeads), borderRadius: 10, backgroundColor: '#34d399' },
-              { label: 'Propostas enviadas', data: prospectRows.map(r => r.propostasEnviadas), borderRadius: 10, backgroundColor: '#60a5fa' },
-              { label: 'Propostas fechadas', data: prospectRows.map(r => r.propostasFechadas), borderRadius: 10, backgroundColor: '#f59e0b' }
+              { label: 'Prospecção ativa', data: prospectRows.map(r => r.prospeccaoAtiva), borderRadius: 10, backgroundColor: '#34d399' },
+              { label: 'Lista de renovações', data: prospectRows.map(r => r.listaRenovacoes), borderRadius: 10, backgroundColor: '#60a5fa' },
+              { label: 'Indicações de clientes', data: prospectRows.map(r => r.indicacoesClientes), borderRadius: 10, backgroundColor: '#a78bfa' },
+              { label: 'Propostas enviadas', data: prospectRows.map(r => r.propostasEnviadas), borderRadius: 10, backgroundColor: '#f59e0b' },
+              { label: 'Propostas fechadas', data: prospectRows.map(r => r.propostasFechadas), borderRadius: 10, backgroundColor: '#f87171' }
             ]
           },
           options: commonOptions
@@ -978,11 +1019,18 @@
       const enviadas = rows.reduce((sum, row) => sum + row.propostasEnviadas, 0);
       const fechadas = rows.reduce((sum, row) => sum + row.propostasFechadas, 0);
       const conversao = enviadas > 0 ? (fechadas / enviadas) * 100 : 0;
+      const canais = [
+        { label: 'Prospecção ativa', total: rows.reduce((sum, row) => sum + row.prospeccaoAtiva, 0) },
+        { label: 'Renovações', total: rows.reduce((sum, row) => sum + row.listaRenovacoes, 0) },
+        { label: 'Indicações', total: rows.reduce((sum, row) => sum + row.indicacoesClientes, 0) }
+      ].sort((a, b) => b.total - a.total);
+      const canalPrincipal = canais[0]?.total > 0 ? canais[0].label : '-';
 
       document.getElementById('kpiLeads').textContent = totalLeads;
       document.getElementById('kpiPropostasEnviadas').textContent = enviadas;
       document.getElementById('kpiPropostasFechadas').textContent = fechadas;
       document.getElementById('kpiConversaoPropostas').textContent = `${conversao.toFixed(1)}%`;
+      document.getElementById('kpiCanalPrincipal').textContent = canalPrincipal;
 
       if (!rows.length) {
         container.innerHTML = '<div class="empty-state">Nenhum dado de prospecção encontrado para o mês filtrado.</div>';
@@ -1112,15 +1160,37 @@
     const loadRemoteCsv = async () => {
       try {
         document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Carregando dados da planilha...</div>';
-        const response = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`Não foi possível carregar o CSV (${response.status})`);
+        document.getElementById('prospectionTableContainer').innerHTML = '<div class="empty-state">Carregando dados de prospecção...</div>';
+        const [mainResponse, prospectResponse] = await Promise.all([
+          fetch(SHEET_CSV_URL, { cache: 'no-store' }),
+          fetch(PROSPECTION_CSV_URL, { cache: 'no-store' })
+        ]);
+        if (!mainResponse.ok) throw new Error(`Não foi possível carregar o CSV principal (${mainResponse.status})`);
+        if (!prospectResponse.ok) throw new Error(`Não foi possível carregar o CSV de prospecção (${prospectResponse.status})`);
 
-        const csvText = await response.text();
-        const workbook = XLSX.read(csvText, { type: 'string', raw: true });
-        loadWorkbookData(workbook);
+        const mainCsvText = await mainResponse.text();
+        const prospectCsvText = await prospectResponse.text();
+        const mainWorkbook = XLSX.read(mainCsvText, { type: 'string', raw: true });
+        const prospectWorkbook = XLSX.read(prospectCsvText, { type: 'string', raw: true });
+        const mainWorksheet = mainWorkbook.Sheets[mainWorkbook.SheetNames[0]];
+        const prospectWorksheet = prospectWorkbook.Sheets[prospectWorkbook.SheetNames[0]];
+        const mainJsonByLetters = XLSX.utils.sheet_to_json(mainWorksheet, { header: 'A', defval: '' });
+        const prospectJsonByLetters = XLSX.utils.sheet_to_json(prospectWorksheet, { header: 'A', defval: '' });
+
+        state.prospectRows = extractProspectionRows(prospectJsonByLetters);
+
+        const detectedMeta = extractMetaFromRows(mainJsonByLetters);
+        if (detectedMeta && !Number.isNaN(detectedMeta)) {
+          document.getElementById('metaInput').value = detectedMeta;
+        }
+
+        state.rows = prepareRows(mainJsonByLetters);
+        setupFilters();
+        applyFilters();
       } catch (error) {
         console.error(error);
         document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Não foi possível carregar o CSV automaticamente. Verifique se a planilha publicada está acessível.</div>';
+        document.getElementById('prospectionTableContainer').innerHTML = '<div class="empty-state">Não foi possível carregar a aba PROSPEÇÕES automaticamente.</div>';
       }
     };
 

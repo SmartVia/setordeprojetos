@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Comercial e Projetos</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #050505;
+      --panel: rgba(255,255,255,0.06);
+      --panel-strong: rgba(255,255,255,0.1);
+      --border: rgba(255,255,255,0.12);
+      --text: #f5f5f5;
+      --muted: #a3a3a3;
+      --accent: #34d399;
+      --accent-2: #60a5fa;
+      --accent-3: #f59e0b;
+      --danger: #f87171;
+      --shadow: 0 12px 40px rgba(0,0,0,0.35);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(52,211,153,0.14), transparent 24%),
+        radial-gradient(circle at top right, rgba(96,165,250,0.14), transparent 22%),
+        linear-gradient(180deg, #090909, #020202 60%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+      padding: 26px;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      animation: fadeUp .8s ease;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: .02em;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.5;
+    }
+
+    .upload-box {
+      min-width: 310px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .upload-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(52,211,153,0.3);
+      background: rgba(52,211,153,0.12);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .25s ease;
+    }
+
+    .upload-label:hover { transform: translateY(-1px); background: rgba(52,211,153,0.2); }
+    input[type="file"] { display: none; }
+
+    .helper {
+      color: var(--muted);
+      font-size: .92rem;
+      text-align: center;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+      animation: fadeUp 1s ease;
+    }
+
+    .control-card, .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .control-card {
+      padding: 16px;
+    }
+
+    .control-card label {
+      display: block;
+      color: var(--muted);
+      font-size: .82rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .control-card select,
+    .control-card input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      outline: none;
+    }
+
+    /* Correção de legibilidade dos filtros: evita texto branco em fundo branco no menu aberto */
+    .control-card select {
+      color: #ffffff;
+      background-color: rgba(31,41,55,0.92);
+      color-scheme: dark;
+      cursor: pointer;
+    }
+
+    .control-card select option {
+      background-color: #111827;
+      color: #f9fafb;
+      padding: 10px;
+    }
+
+    .control-card select option:checked,
+    .control-card select option:hover {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .control-card input::placeholder { color: rgba(245,245,245,0.45); }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+      animation: fadeUp 1.15s ease;
+    }
+
+    .kpi {
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -40px auto;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.16), transparent 70%);
+    }
+
+    .kpi-title {
+      color: var(--muted);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 12px;
+    }
+
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .kpi-sub {
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      padding: 20px;
+      animation: fadeUp 1.2s ease;
+    }
+
+    .card h3 {
+      margin: 0 0 18px;
+      font-size: 1rem;
+      letter-spacing: .04em;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-height: 320px;
+    }
+
+    .full-width { margin-bottom: 18px; }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 950px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-size: .95rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,10,0.95);
+      color: #d4d4d4;
+      z-index: 2;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .status-fechado { background: rgba(52,211,153,0.14); color: #86efac; border-color: rgba(52,211,153,0.24); }
+    .status-em-andamento { background: rgba(96,165,250,0.14); color: #93c5fd; border-color: rgba(96,165,250,0.24); }
+    .status-concluido { background: rgba(245,158,11,0.14); color: #fcd34d; border-color: rgba(245,158,11,0.24); }
+    .status-em-analise { background: rgba(167,139,250,0.14); color: #c4b5fd; border-color: rgba(167,139,250,0.24); }
+    .status-outro { background: rgba(248,113,113,0.14); color: #fca5a5; border-color: rgba(248,113,113,0.24); }
+
+    .progress-card {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .progress-ring {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .progress-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring .center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .progress-ring .center strong {
+      font-size: 2rem;
+    }
+
+    .progress-ring .center span {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .empty-state {
+      padding: 36px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed rgba(255,255,255,0.12);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+
+
+    .insight-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .mini-kpi {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .mini-kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+
+    .mini-kpi strong {
+      font-size: 1.55rem;
+    }
+
+    .section-note {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: -8px 0 16px;
+      font-size: .94rem;
+    }
+
+    @media (max-width: 1180px) {
+      .controls, .kpis, .insight-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid { grid-template-columns: 1fr; }
+      .hero { flex-direction: column; align-items: flex-start; }
+      .upload-box { width: 100%; min-width: 0; }
+      .progress-card { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .container { padding: 16px; }
+      .controls, .kpis, .insight-strip { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.45rem; }
+      .kpi-value { font-size: 1.55rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div>
+        <h1>Dashboard Comercial e Projetos</h1>
+        <p>
+          Faça o upload da sua planilha Excel para visualizar vendas, meta, status dos projetos,
+          evolução mensal, filtros inteligentes e indicadores executivos em um painel escuro, moderno e profissional.
+        </p>
+      </div>
+      <div class="upload-box">
+        <label class="upload-label" for="fileInput">Selecionar planilha (.xlsx ou .xls)</label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+        <div class="helper">Colunas esperadas: Cliente, Tipo de Serviço, Preço da Venda, Data de Fechamento, Status do Projeto e Data de Conclusão. A prospecção será lida pela aba PROSPEÇÕES.</div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="control-card">
+        <label for="searchInput">Buscar cliente</label>
+        <input id="searchInput" type="text" placeholder="Digite o nome do cliente" />
+      </div>
+      <div class="control-card">
+        <label for="serviceFilter">Tipo de serviço</label>
+        <select id="serviceFilter"><option value="">Todos</option></select>
+      </div>
+      <div class="control-card">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter"><option value="">Todos</option></select>
+      </div>
+      <div class="control-card">
+        <label for="monthFilter">Mês de fechamento</label>
+        <select id="monthFilter"><option value="">Todos</option></select>
+      </div>
+      <div class="control-card">
+        <label for="conclusionMonthFilter">Mês de conclusão</label>
+        <select id="conclusionMonthFilter"><option value="">Todos</option></select>
+      </div>
+      <div class="control-card">
+        <label for="metaInput">Meta mensal (R$)</label>
+        <input id="metaInput" type="number" min="0" step="0.01" value="20000" />
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="card kpi">
+        <div class="kpi-title">Venda total</div>
+        <div class="kpi-value" id="kpiTotalVendas">R$ 0,00</div>
+        <div class="kpi-sub" id="kpiTotalRegistros">0 registros analisados</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title">Meta mensal</div>
+        <div class="kpi-value" id="kpiMeta">R$ 0,00</div>
+        <div class="kpi-sub">Valor configurável</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title">Atingimento da meta</div>
+        <div class="kpi-value" id="kpiPercentualMeta">0%</div>
+        <div class="kpi-sub" id="kpiGapMeta">Sem dados</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title">Ticket médio</div>
+        <div class="kpi-value" id="kpiTicketMedio">R$ 0,00</div>
+        <div class="kpi-sub">Média por venda filtrada</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title">Projetos fechados</div>
+        <div class="kpi-value" id="kpiFechados">0</div>
+        <div class="kpi-sub" id="kpiConversaoStatus">0% do total filtrado</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Performance de venda x meta</h3>
+        <div class="progress-card">
+          <div class="progress-ring">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.10)" stroke-width="10" fill="none"></circle>
+              <circle id="progressStroke" cx="60" cy="60" r="52" stroke="url(#grad)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"></circle>
+              <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#34d399" />
+                  <stop offset="100%" stop-color="#60a5fa" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="center">
+              <strong id="progressPercentText">0%</strong>
+              <span>meta atingida</span>
+            </div>
+          </div>
+          <div>
+            <p style="margin:0 0 10px;color:var(--muted);line-height:1.6;">
+              Este indicador compara o total de vendas filtrado com a meta mensal informada.
+              Ao alterar filtros ou a meta, o percentual é recalculado automaticamente.
+            </p>
+            <div id="metaResumo" style="font-size:1rem;font-weight:700;line-height:1.7;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Status dos projetos</h3>
+        <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Vendas por tipo de serviço</h3>
+        <div class="chart-wrap"><canvas id="serviceChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Evolução das vendas por mês</h3>
+        <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+      </div>
+    </section>
+
+
+    <section class="card full-width">
+      <h3>Quantidade de prospecção de novos clientes</h3>
+      <p class="section-note">
+        Esta área lê automaticamente a tabela inferior da planilha e acompanha prospecção ativa,
+        lista de renovações, indicações, total de leads, propostas enviadas e propostas fechadas.
+        O filtro de mês de fechamento acima também filtra estes indicadores.
+      </p>
+      <div class="insight-strip">
+        <div class="mini-kpi"><span>Total de leads</span><strong id="kpiLeads">0</strong></div>
+        <div class="mini-kpi"><span>Propostas enviadas</span><strong id="kpiPropostasEnviadas">0</strong></div>
+        <div class="mini-kpi"><span>Propostas fechadas</span><strong id="kpiPropostasFechadas">0</strong></div>
+        <div class="mini-kpi"><span>Conversão proposta</span><strong id="kpiConversaoPropostas">0%</strong></div>
+      </div>
+      <div class="chart-wrap" style="margin-bottom:18px;"><canvas id="leadChart"></canvas></div>
+      <div id="prospectionTableContainer" class="table-wrap">
+        <div class="empty-state">Faça o upload de uma planilha com a tabela de prospecção para carregar os dados.</div>
+      </div>
+    </section>
+
+    <section class="card full-width">
+      <h3>Tabela detalhada</h3>
+      <div id="tableContainer" class="table-wrap">
+        <div class="empty-state">Faça o upload de uma planilha para carregar os dados.</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyM6cDpNsRa8vYzJ0oXFAuU_0uKr8d4F2bUguTYIWs76eHDgAMU0q8xs2OiIuaOWt_LnoVbeIQLnDT/pub?output=csv';
+
+    const state = {
+      rows: [],
+      filteredRows: [],
+      prospectRows: [],
+      filteredProspectRows: [],
+      charts: {}
+    };
+
+    const formatCurrency = (value) => {
+      const number = Number(value || 0);
+      return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const parseCurrency = (value) => {
+      if (typeof value === 'number') return value;
+      if (value == null) return 0;
+      const clean = String(value)
+        .replace(/R\$/gi, '')
+        .replace(/\s/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+      const parsed = parseFloat(clean);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const excelDateToJSDate = (serial) => {
+      // Corrige a leitura de datas do Excel sem deslocar para o mês anterior por fuso horário.
+      // Ex.: 01/03/2026 precisa aparecer como mar/26, e não fev/26.
+      const wholeDays = Math.floor(Number(serial));
+      const fractionalDay = Number(serial) - wholeDays;
+      const baseDate = new Date(1899, 11, 30);
+      baseDate.setDate(baseDate.getDate() + wholeDays);
+
+      let totalSeconds = Math.round(86400 * fractionalDay);
+      const hours = Math.floor(totalSeconds / 3600);
+      totalSeconds -= hours * 3600;
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds - minutes * 60;
+
+      baseDate.setHours(hours, minutes, seconds, 0);
+      return baseDate;
+    };
+
+    const parseDate = (value) => {
+      if (!value && value !== 0) return null;
+      if (value instanceof Date && !isNaN(value)) return value;
+      if (typeof value === 'number') return excelDateToJSDate(value);
+
+      const text = String(value).trim();
+      if (!text) return null;
+
+      const slashDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (slashDate) {
+        const first = Number(slashDate[1]);
+        const second = Number(slashDate[2]);
+        const year = Number(slashDate[3].length === 2 ? `20${slashDate[3]}` : slashDate[3]);
+        const isBrazilianOnly = first > 12;
+        const day = isBrazilianOnly ? first : second;
+        const month = isBrazilianOnly ? second : first;
+        return new Date(year, month - 1, day);
+      }
+
+      const isoLocal = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (isoLocal) return new Date(Number(isoLocal[1]), Number(isoLocal[2]) - 1, Number(isoLocal[3]));
+
+      const iso = new Date(text);
+      return isNaN(iso) ? null : iso;
+    };
+
+    const monthKey = (date) => {
+      if (!date) return 'Sem data';
+      return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+    };
+
+    const dateKey = (date) => {
+      if (!date) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const normalizeStatusClass = (status) => {
+      const s = (status || '').toString().trim().toLowerCase();
+      if (s === 'fechado') return 'status-fechado';
+      if (s === 'em andamento') return 'status-em-andamento';
+      if (s === 'concluido' || s === 'concluído') return 'status-concluido';
+      if (s === 'em analise' || s === 'em análise') return 'status-em-analise';
+      return 'status-outro';
+    };
+
+    const destroyCharts = () => {
+      Object.values(state.charts).forEach(chart => chart?.destroy?.());
+      state.charts = {};
+    };
+
+    const fillSelect = (select, values, placeholder = 'Todos') => {
+      select.innerHTML = `<option value="">${placeholder}</option>`;
+      [...values].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b), 'pt-BR')).forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    };
+
+    const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+    const detectHeaderAndDataRows = (rows) => {
+      const normalizedRows = rows.map(row => {
+        const obj = {};
+        Object.keys(row || {}).forEach(key => {
+          obj[String(key || '').trim()] = row[key];
+        });
+        return obj;
+      });
+
+      const headerIndex = normalizedRows.findIndex(row => {
+        const values = Object.values(row).map(v => normalizeText(v));
+        return values.includes('cliente') &&
+               values.some(v => v.includes('tipo')) &&
+               values.some(v => v.includes('data')) &&
+               values.some(v => v.includes('preço') || v.includes('preco')) &&
+               values.some(v => v.includes('status'));
+      });
+
+      if (headerIndex === -1) {
+        return { headers: Object.keys(normalizedRows[0] || {}), dataRows: normalizedRows };
+      }
+
+      const headerSource = normalizedRows[headerIndex];
+      const rawHeaders = Object.keys(headerSource).sort((a, b) => {
+        const na = Number(a), nb = Number(b);
+        if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+        return a.localeCompare(b, 'pt-BR');
+      });
+
+      const headers = rawHeaders.map(key => String(headerSource[key] || '').trim() || key);
+      const dataRows = normalizedRows.slice(headerIndex + 1)
+        .map(row => {
+          const mapped = {};
+          rawHeaders.forEach((key, index) => {
+            mapped[headers[index]] = row[key] ?? '';
+          });
+          return mapped;
+        });
+
+      return { headers, dataRows };
+    };
+
+    const extractMetaFromRows = (rows) => {
+      for (const row of rows) {
+        const values = Object.values(row || {});
+        const texts = values.map(v => normalizeText(v));
+        if (texts.some(v => v.includes('meta mínima') || v.includes('meta minima'))) {
+          const numericCandidate = values.find(v => parseCurrency(v) > 0);
+          if (numericCandidate != null) return parseCurrency(numericCandidate);
+        }
+      }
+      return null;
+    };
+
+    const toNumber = (value) => {
+      if (value === '' || value == null) return 0;
+      if (typeof value === 'number') return value;
+      const parsed = parseCurrency(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const monthShortKey = (date) => {
+      if (!date) return 'Sem mês';
+      return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
+    };
+
+    const extractProspectionRows = (rows) => {
+      const normalizedRows = rows.map(row => {
+        const obj = {};
+        Object.keys(row || {}).forEach(key => obj[String(key || '').trim()] = row[key]);
+        return obj;
+      });
+
+      const headerIndex = normalizedRows.findIndex(row => {
+        const values = Object.values(row).map(v => normalizeText(v));
+        return values.includes('mês') || values.includes('mes')
+          ? values.some(v => v.includes('prospe')) && values.some(v => v.includes('propostas'))
+          : false;
+      });
+
+      if (headerIndex === -1) return [];
+
+      const headerSource = normalizedRows[headerIndex];
+      const rawHeaders = Object.keys(headerSource).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+      const headers = rawHeaders.map(key => normalizeText(headerSource[key]));
+      const findCol = (terms) => rawHeaders.find((key, idx) => terms.some(term => headers[idx].includes(term)));
+
+      const colMes = findCol(['mês', 'mes']);
+      const colAtiva = findCol(['prospeção ativa', 'prospecção ativa', 'prospeção', 'prospecção ativa']);
+      const colRenovacoes = findCol(['lista de renova']);
+      const colIndicacoes = findCol(['indica']);
+      const colTotal = findCol(['total de leads']);
+      const colEnviadas = findCol(['propostas enviadas']);
+      const colFechadas = findCol(['propostas fechadas']);
+
+      return normalizedRows.slice(headerIndex + 1).map(row => {
+        const date = parseDate(row[colMes]);
+        const prospeccaoAtiva = toNumber(row[colAtiva]);
+        const listaRenovacoes = toNumber(row[colRenovacoes]);
+        const indicacoesClientes = toNumber(row[colIndicacoes]);
+        const totalLeads = toNumber(row[colTotal]) || (prospeccaoAtiva + listaRenovacoes + indicacoesClientes);
+        const propostasEnviadas = toNumber(row[colEnviadas]);
+        const propostasFechadas = toNumber(row[colFechadas]);
+        return {
+          mes: date ? monthShortKey(date) : String(row[colMes] || '').trim(),
+          mesFiltro: date ? monthKey(date) : String(row[colMes] || '').trim(),
+          data: date,
+          prospeccaoAtiva,
+          listaRenovacoes,
+          indicacoesClientes,
+          totalLeads,
+          propostasEnviadas,
+          propostasFechadas
+        };
+      }).filter(item => item.mes && (item.prospeccaoAtiva || item.listaRenovacoes || item.indicacoesClientes || item.totalLeads || item.propostasEnviadas || item.propostasFechadas));
+    };
+
+
+    const prepareRows = (rows) => {
+      const { dataRows } = detectHeaderAndDataRows(rows);
+      const normalized = dataRows
+        .map(row => {
+          const rawKeys = Object.keys(row || {});
+          const getValue = (possibilities) => {
+            for (const key of rawKeys) {
+              const normalizedKey = key.toString().trim().toLowerCase();
+              if (possibilities.includes(normalizedKey)) return row[key];
+            }
+            return '';
+          };
+
+          const cliente = getValue(['cliente']);
+          const tipoServico = getValue(['tipo de serviço', 'tipo de servico', 'tipo serviço', 'tipo servico', 'serviço', 'servico']);
+          const dataFechamento = getValue(['data de fechamento', 'data fechamento']);
+          const dataConclusao = getValue(['data de conclusão', 'data de conclusao', 'data conclusão', 'data conclusao']);
+          const precoVenda = getValue(['preço da venda', 'preco da venda', 'valor da venda', 'preço', 'preco']);
+          const statusProjeto = getValue(['status do projeto', 'status projeto', 'status']);
+
+          return {
+            cliente: String(cliente || '').trim(),
+            tipoServico: String(tipoServico || '').trim(),
+            data: parseDate(dataFechamento),
+            dataOriginal: dataFechamento,
+            dataConclusao: parseDate(dataConclusao),
+            dataConclusaoOriginal: dataConclusao,
+            precoVenda: parseCurrency(precoVenda),
+            statusProjeto: String(statusProjeto || '').trim()
+          };
+        })
+        .filter(item => {
+          const hasMainFields = item.cliente || item.tipoServico || item.statusProjeto || item.data;
+          const looksLikeSummary = normalizeText(item.cliente).includes('total') || normalizeText(item.tipoServico).includes('total') || normalizeText(item.tipoServico).includes('meta');
+          return hasMainFields && !looksLikeSummary;
+        });
+
+      return normalized;
+    };
+
+    const applyFilters = () => {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const service = document.getElementById('serviceFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const closingDate = document.getElementById('monthFilter').value;
+      const conclusionDate = document.getElementById('conclusionMonthFilter').value;
+
+      state.filteredRows = state.rows.filter(row => {
+        const matchesSearch = !search || row.cliente.toLowerCase().includes(search);
+        const matchesService = !service || row.tipoServico === service;
+        const matchesStatus = !status || row.statusProjeto === status;
+        const matchesClosingDate = !closingDate || dateKey(row.data) === closingDate;
+        const matchesConclusionDate = !conclusionDate || dateKey(row.dataConclusao) === conclusionDate;
+        return matchesSearch && matchesService && matchesStatus && matchesClosingDate && matchesConclusionDate;
+      });
+
+      state.filteredProspectRows = state.prospectRows.filter(row => !closingDate || dateKey(row.data) === closingDate);
+
+      renderDashboard();
+    };
+
+    const renderKPIs = () => {
+      const rows = state.filteredRows;
+      const total = rows.reduce((sum, row) => sum + row.precoVenda, 0);
+      const meta = Number(document.getElementById('metaInput').value || 0);
+      const percentual = meta > 0 ? (total / meta) * 100 : 0;
+      const ticket = rows.length ? total / rows.length : 0;
+      const fechados = rows.filter(r => ['fechado', 'concluido', 'concluído'].includes(r.statusProjeto.toLowerCase().trim())).length;
+      const diff = total - meta;
+
+      document.getElementById('kpiTotalVendas').textContent = formatCurrency(total);
+      document.getElementById('kpiTotalRegistros').textContent = `${rows.length} registro(s) analisado(s)`;
+      document.getElementById('kpiMeta').textContent = formatCurrency(meta);
+      document.getElementById('kpiPercentualMeta').textContent = `${percentual.toFixed(1)}%`;
+      document.getElementById('kpiGapMeta').textContent = diff >= 0
+        ? `Acima da meta em ${formatCurrency(diff)}`
+        : `Faltam ${formatCurrency(Math.abs(diff))} para a meta`;
+      document.getElementById('kpiTicketMedio').textContent = formatCurrency(ticket);
+      document.getElementById('kpiFechados').textContent = fechados;
+      document.getElementById('kpiConversaoStatus').textContent = rows.length
+        ? `${((fechados / rows.length) * 100).toFixed(1)}% do total filtrado`
+        : '0% do total filtrado';
+
+      const circumference = 326.73;
+      const capped = Math.min(percentual, 100);
+      const offset = circumference - (capped / 100) * circumference;
+      document.getElementById('progressStroke').style.strokeDashoffset = offset;
+      document.getElementById('progressPercentText').textContent = `${percentual.toFixed(1)}%`;
+      document.getElementById('metaResumo').innerHTML = `
+        <div>Total filtrado: <span style="color:#86efac">${formatCurrency(total)}</span></div>
+        <div>Meta informada: <span style="color:#93c5fd">${formatCurrency(meta)}</span></div>
+        <div>${diff >= 0 ? 'Superávit' : 'Déficit'}: <span style="color:${diff >= 0 ? '#fcd34d' : '#fca5a5'}">${formatCurrency(Math.abs(diff))}</span></div>
+      `;
+    };
+
+    const renderCharts = () => {
+      destroyCharts();
+      const rows = state.filteredRows;
+
+      const statusMap = {};
+      const serviceMap = {};
+      const monthMap = {};
+
+      rows.forEach(row => {
+        const status = row.statusProjeto || 'Sem status';
+        const service = row.tipoServico || 'Sem tipo';
+        const month = monthKey(row.data);
+        statusMap[status] = (statusMap[status] || 0) + 1;
+        serviceMap[service] = (serviceMap[service] || 0) + row.precoVenda;
+        monthMap[month] = (monthMap[month] || 0) + row.precoVenda;
+      });
+
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1100, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { labels: { color: '#e5e5e5' } },
+          tooltip: {
+            backgroundColor: 'rgba(10,10,10,0.92)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: 'rgba(255,255,255,0.15)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#bdbdbd' },
+            grid: { color: 'rgba(255,255,255,0.06)' }
+          },
+          y: {
+            ticks: { color: '#bdbdbd' },
+            grid: { color: 'rgba(255,255,255,0.06)' }
+          }
+        }
+      };
+
+      state.charts.status = new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(statusMap),
+          datasets: [{
+            data: Object.values(statusMap),
+            backgroundColor: ['#34d399', '#60a5fa', '#f59e0b', '#f87171', '#a78bfa'],
+            borderWidth: 0,
+            hoverOffset: 12
+          }]
+        },
+        options: {
+          ...commonOptions,
+          cutout: '68%',
+          scales: {}
+        }
+      });
+
+      state.charts.service = new Chart(document.getElementById('serviceChart'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(serviceMap),
+          datasets: [{
+            label: 'Valor em vendas',
+            data: Object.values(serviceMap),
+            borderRadius: 12,
+            backgroundColor: ['#34d399', '#60a5fa', '#f59e0b', '#a78bfa', '#f87171']
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            legend: { display: false }
+          }
+        }
+      });
+
+      state.charts.month = new Chart(document.getElementById('monthChart'), {
+        type: 'line',
+        data: {
+          labels: Object.keys(monthMap),
+          datasets: [{
+            label: 'Vendas por mês',
+            data: Object.values(monthMap),
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(96,165,250,0.18)',
+            fill: true,
+            tension: .35,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: commonOptions
+      });
+
+      const prospectRows = state.filteredProspectRows;
+      const leadCanvas = document.getElementById('leadChart');
+      if (leadCanvas) {
+        state.charts.leads = new Chart(leadCanvas, {
+          type: 'bar',
+          data: {
+            labels: prospectRows.map(r => r.mes),
+            datasets: [
+              { label: 'Total de leads', data: prospectRows.map(r => r.totalLeads), borderRadius: 10, backgroundColor: '#34d399' },
+              { label: 'Propostas enviadas', data: prospectRows.map(r => r.propostasEnviadas), borderRadius: 10, backgroundColor: '#60a5fa' },
+              { label: 'Propostas fechadas', data: prospectRows.map(r => r.propostasFechadas), borderRadius: 10, backgroundColor: '#f59e0b' }
+            ]
+          },
+          options: commonOptions
+        });
+      }
+    };
+
+
+
+    const renderProspection = () => {
+      const rows = state.filteredProspectRows;
+      const container = document.getElementById('prospectionTableContainer');
+      const totalLeads = rows.reduce((sum, row) => sum + row.totalLeads, 0);
+      const enviadas = rows.reduce((sum, row) => sum + row.propostasEnviadas, 0);
+      const fechadas = rows.reduce((sum, row) => sum + row.propostasFechadas, 0);
+      const conversao = enviadas > 0 ? (fechadas / enviadas) * 100 : 0;
+
+      document.getElementById('kpiLeads').textContent = totalLeads;
+      document.getElementById('kpiPropostasEnviadas').textContent = enviadas;
+      document.getElementById('kpiPropostasFechadas').textContent = fechadas;
+      document.getElementById('kpiConversaoPropostas').textContent = `${conversao.toFixed(1)}%`;
+
+      if (!rows.length) {
+        container.innerHTML = '<div class="empty-state">Nenhum dado de prospecção encontrado para o mês filtrado.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th>Prospecção Ativa</th>
+            <th>Lista de Renovações</th>
+            <th>Indicações de Clientes</th>
+            <th>Total de Leads</th>
+            <th>Propostas Enviadas</th>
+            <th>Propostas Fechadas</th>
+            <th>Conversão</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => {
+            const conv = row.propostasEnviadas > 0 ? (row.propostasFechadas / row.propostasEnviadas) * 100 : 0;
+            return `
+              <tr>
+                <td>${row.mes}</td>
+                <td>${row.prospeccaoAtiva}</td>
+                <td>${row.listaRenovacoes}</td>
+                <td>${row.indicacoesClientes}</td>
+                <td>${row.totalLeads}</td>
+                <td>${row.propostasEnviadas}</td>
+                <td>${row.propostasFechadas}</td>
+                <td>${conv.toFixed(1)}%</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      `;
+      container.innerHTML = '';
+      container.appendChild(table);
+    };
+
+    const renderTable = () => {
+      const rows = state.filteredRows;
+      const container = document.getElementById('tableContainer');
+
+      if (!rows.length) {
+        container.innerHTML = '<div class="empty-state">Nenhum dado encontrado com os filtros atuais.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Tipo de Serviço</th>
+            <th>Data de Fechamento</th>
+            <th>Data de Conclusão</th>
+            <th>Preço da Venda</th>
+            <th>Status do Projeto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr>
+              <td>${row.cliente || '-'}</td>
+              <td>${row.tipoServico || '-'}</td>
+              <td>${row.data ? row.data.toLocaleDateString('pt-BR') : '-'}</td>
+              <td>${row.dataConclusao ? row.dataConclusao.toLocaleDateString('pt-BR') : '-'}</td>
+              <td>${formatCurrency(row.precoVenda)}</td>
+              <td><span class="badge ${normalizeStatusClass(row.statusProjeto)}">${row.statusProjeto || 'Sem status'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+
+      container.innerHTML = '';
+      container.appendChild(table);
+    };
+
+    const renderDashboard = () => {
+      renderKPIs();
+      renderCharts();
+      renderProspection();
+      renderTable();
+    };
+
+    const setupFilters = () => {
+      fillSelect(document.getElementById('serviceFilter'), new Set(state.rows.map(r => r.tipoServico)));
+      fillSelect(document.getElementById('statusFilter'), new Set(state.rows.map(r => r.statusProjeto)));
+    };
+
+    const setupDateFilterInputs = () => {
+      const configs = [
+        { id: 'monthFilter', label: 'Data de fechamento' },
+        { id: 'conclusionMonthFilter', label: 'Data de conclusão' }
+      ];
+
+      configs.forEach(({ id, label }) => {
+        const current = document.getElementById(id);
+        if (!current || current.type === 'date') return;
+
+        const input = document.createElement('input');
+        input.id = id;
+        input.type = 'date';
+        input.value = '';
+        current.replaceWith(input);
+
+        const labelElement = document.querySelector(`label[for="${id}"]`);
+        if (labelElement) labelElement.textContent = label;
+      });
+    };
+
+    const loadWorkbookData = (workbook) => {
+      const mainSheetName = workbook.SheetNames.find(name => normalizeText(name).includes('fechamento')) || workbook.SheetNames[0];
+      const prospectSheetName = workbook.SheetNames.find(name => {
+        const normalized = normalizeText(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return normalized.includes('prospec');
+      });
+
+      const mainWorksheet = workbook.Sheets[mainSheetName];
+      const prospectWorksheet = prospectSheetName ? workbook.Sheets[prospectSheetName] : null;
+
+      const mainJsonByLetters = XLSX.utils.sheet_to_json(mainWorksheet, { header: 'A', defval: '' });
+      const prospectJsonByLetters = prospectWorksheet
+        ? XLSX.utils.sheet_to_json(prospectWorksheet, { header: 'A', defval: '' })
+        : [];
+
+      state.prospectRows = extractProspectionRows(prospectJsonByLetters);
+
+      const detectedMeta = extractMetaFromRows(mainJsonByLetters);
+      if (detectedMeta && !Number.isNaN(detectedMeta)) {
+        document.getElementById('metaInput').value = detectedMeta;
+      }
+
+      state.rows = prepareRows(mainJsonByLetters);
+      setupFilters();
+      applyFilters();
+    };
+
+    const loadRemoteCsv = async () => {
+      try {
+        document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Carregando dados da planilha...</div>';
+        const response = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Não foi possível carregar o CSV (${response.status})`);
+
+        const csvText = await response.text();
+        const workbook = XLSX.read(csvText, { type: 'string', raw: true });
+        loadWorkbookData(workbook);
+      } catch (error) {
+        console.error(error);
+        document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Não foi possível carregar o CSV automaticamente. Verifique se a planilha publicada está acessível.</div>';
+      }
+    };
+
+    document.getElementById('fileInput').addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array', raw: true });
+      loadWorkbookData(workbook);
+    });
+
+    setupDateFilterInputs();
+    loadRemoteCsv();
+    ['searchInput', 'serviceFilter', 'statusFilter', 'monthFilter', 'conclusionMonthFilter', 'metaInput'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+  </script>
+</body>
+</html>

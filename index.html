@@ -802,23 +802,22 @@
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const service = document.getElementById('serviceFilter').value;
       const status = document.getElementById('statusFilter').value;
-      const closingDate = document.getElementById('monthFilter').value;
-      const conclusionDate = document.getElementById('conclusionMonthFilter').value;
+      const closingMonth = document.getElementById('monthFilter').value;
+      const conclusionMonth = document.getElementById('conclusionMonthFilter').value;
 
       state.filteredRows = state.rows.filter(row => {
         const matchesSearch = !search || row.cliente.toLowerCase().includes(search);
         const matchesService = !service || row.tipoServico === service;
         const matchesStatus = !status || row.statusProjeto === status;
-        const matchesClosingDate = !closingDate || dateKey(row.data) === closingDate;
-        const matchesConclusionDate = !conclusionDate || dateKey(row.dataConclusao) === conclusionDate;
-        return matchesSearch && matchesService && matchesStatus && matchesClosingDate && matchesConclusionDate;
+        const matchesClosingMonth = !closingMonth || monthKey(row.data) === closingMonth;
+        const matchesConclusionMonth = !conclusionMonth || monthKey(row.dataConclusao) === conclusionMonth;
+        return matchesSearch && matchesService && matchesStatus && matchesClosingMonth && matchesConclusionMonth;
       });
 
-      state.filteredProspectRows = state.prospectRows.filter(row => !closingDate || dateKey(row.data) === closingDate);
+      state.filteredProspectRows = state.prospectRows.filter(row => !closingMonth || row.mesFiltro === closingMonth);
 
       renderDashboard();
     };
-
     const renderKPIs = () => {
       const rows = state.filteredRows;
       const total = rows.reduce((sum, row) => sum + row.precoVenda, 0);
@@ -1075,29 +1074,14 @@
     const setupFilters = () => {
       fillSelect(document.getElementById('serviceFilter'), new Set(state.rows.map(r => r.tipoServico)));
       fillSelect(document.getElementById('statusFilter'), new Set(state.rows.map(r => r.statusProjeto)));
+      fillSelect(document.getElementById('monthFilter'), new Set([...state.rows.map(r => monthKey(r.data)), ...state.prospectRows.map(r => r.mesFiltro)]));
+      fillSelect(document.getElementById('conclusionMonthFilter'), new Set(state.rows.map(r => monthKey(r.dataConclusao))));
+
+      const closingLabel = document.querySelector('label[for="monthFilter"]');
+      const conclusionLabel = document.querySelector('label[for="conclusionMonthFilter"]');
+      if (closingLabel) closingLabel.textContent = 'Mês de fechamento';
+      if (conclusionLabel) conclusionLabel.textContent = 'Mês de conclusão';
     };
-
-    const setupDateFilterInputs = () => {
-      const configs = [
-        { id: 'monthFilter', label: 'Data de fechamento' },
-        { id: 'conclusionMonthFilter', label: 'Data de conclusão' }
-      ];
-
-      configs.forEach(({ id, label }) => {
-        const current = document.getElementById(id);
-        if (!current || current.type === 'date') return;
-
-        const input = document.createElement('input');
-        input.id = id;
-        input.type = 'date';
-        input.value = '';
-        current.replaceWith(input);
-
-        const labelElement = document.querySelector(`label[for="${id}"]`);
-        if (labelElement) labelElement.textContent = label;
-      });
-    };
-
     const loadWorkbookData = (workbook) => {
       const mainSheetName = workbook.SheetNames.find(name => normalizeText(name).includes('fechamento')) || workbook.SheetNames[0];
       const prospectSheetName = workbook.SheetNames.find(name => {
@@ -1149,7 +1133,6 @@
       loadWorkbookData(workbook);
     });
 
-    setupDateFilterInputs();
     loadRemoteCsv();
     ['searchInput', 'serviceFilter', 'statusFilter', 'monthFilter', 'conclusionMonthFilter', 'metaInput'].forEach(id => {
       document.getElementById(id).addEventListener('input', applyFilters);
